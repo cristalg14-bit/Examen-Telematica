@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Examen Telemática - Aula 1.1</title>
+<title>Examen Telemática - Aula 2.0</title>
 
 <style>
 body{
@@ -19,72 +19,19 @@ padding:25px;
 background:rgba(255,255,255,0.04);
 border:1px solid #00c2ff33;
 border-radius:15px;
-box-shadow:0 0 20px #00c2ff22;
-backdrop-filter:blur(10px);
 }
-
-h2{color:#00e5ff;}
-
-input{
-padding:10px;
-width:100%;
-margin:10px 0;
-border:none;
-border-radius:8px;
-}
-
-button{
-padding:10px 15px;
-margin:5px;
-border:none;
-border-radius:8px;
-cursor:pointer;
-font-weight:bold;
-}
-
-.confirmar{background:#00ff88;color:black;}
-.siguiente{background:#00aaff;color:white;display:none;}
 
 .opcion{
 display:block;
-margin:8px 0;
 padding:10px;
+margin:8px 0;
 background:#111827;
-border:1px solid #00c2ff22;
 border-radius:8px;
 cursor:pointer;
 }
 
-.opcion:hover{background:#1f2937;}
-
-.selected{
-background:#00aaff !important;
-color:white;
-box-shadow:0 0 10px #00e5ff55;
-}
-
-header{
-display:flex;
-justify-content:space-between;
-color:#00e5ff;
-margin-bottom:15px;
-}
-
+.selected{background:#00aaff;}
 .hidden{display:none;}
-
-.progress{
-height:8px;
-background:#1f2937;
-border-radius:10px;
-overflow:hidden;
-margin-bottom:15px;
-}
-
-.bar{
-height:100%;
-width:0%;
-background:#00e5ff;
-}
 </style>
 </head>
 
@@ -95,26 +42,18 @@ background:#00e5ff;
 <div id="inicio">
 <h2>Examen Telemática</h2>
 <input id="nombre" placeholder="Nombre completo">
-<button onclick="iniciar()">Iniciar Examen</button>
+<button onclick="iniciar()">Iniciar</button>
 </div>
 
 <div id="examen" class="hidden">
-
-<header>
-<div id="timer">20:00</div>
-<div id="progreso">0/20</div>
-</header>
-
-<div class="progress">
-<div class="bar" id="bar"></div>
-</div>
+<div id="timer"></div>
+<div id="progreso"></div>
 
 <h3 id="pregunta"></h3>
 <div id="opciones"></div>
 
-<button class="confirmar" onclick="confirmar()">Confirmar respuesta</button>
-<button class="siguiente" onclick="siguiente()">Siguiente</button>
-
+<button onclick="confirmar()">Confirmar</button>
+<button id="sig" onclick="siguiente()" style="display:none;">Siguiente</button>
 </div>
 
 <div id="resultado" class="hidden"></div>
@@ -125,184 +64,200 @@ background:#00e5ff;
 <script>
 emailjs.init("1mKKjfR7rkWsEaOOE");
 
-/* =========================
-   BANCO DE PREGUNTAS
-========================= */
+/* ================= SEMILLA ÚNICA ================= */
+
+function seedRandom(seed){
+return function(){
+seed = (seed * 9301 + 49297) % 233280;
+return seed / 233280;
+}
+}
+
+/* ================= BANCO GRANDE ================= */
 
 const banco={
+
 seleccion:[
-{p:"¿Qué es la atenuación?",c:0,o:["Pérdida de señal","Ganancia","Amplificación"],t:"Atenuación"},
-{p:"La diafonía es:",c:0,o:["Interferencia","Velocidad","Potencia"],t:"Diafonía"},
-{p:"El retardo depende de:",c:0,o:["Distancia","Color","Voltaje"],t:"Retardo"},
-{p:"La pérdida de retorno ocurre por:",c:0,o:["Mala conexión","Buen cable","Fibra"],t:"Retorno"},
-{p:"A mayor distancia:",c:0,o:["Más atenuación","Menos","Igual"],t:"Atenuación"}
+...Array.from({length:30},(_,i)=>({
+p:`Atenuación pregunta ${i+1}`,
+c:0,
+o:["Pérdida de señal","Ganancia","Amplificación"]
+}))
 ],
 
 vf:[
-{p:"La atenuación aumenta con la distancia",c:true,t:"Atenuación"},
-{p:"La diafonía mejora la señal",c:false,t:"Diafonía"},
-{p:"El retardo depende del cable",c:true,t:"Retardo"},
-{p:"La pérdida de retorno es deseada",c:false,t:"Retorno"},
-{p:"Un cable largo aumenta el retardo",c:true,t:"Retardo"}
+...Array.from({length:30},(_,i)=>({
+p:`Verdadero/Falso ${i+1}`,
+c:i%2===0
+}))
 ],
 
-completar:[
-{p:"La atenuación es pérdida de ______",c:"señal",t:"Atenuación"},
-{p:"La diafonía es ______ entre cables",c:"interferencia",t:"Diafonía"},
-{p:"El retardo depende de la ______",c:"distancia",t:"Retardo"},
-{p:"La señal puede ______ en malas conexiones",c:"reflejarse",t:"Retorno"},
-{p:"El cable afecta la ______ de transmisión",c:"calidad",t:"Atenuación"}
+afirmaciones:[
+...Array.from({length:30},(_,i)=>({
+p:`Selecciona correctas ${i+1}`,
+c:[0,2],
+o:["Correcta 1","Incorrecta","Correcta 2"]
+}))
 ],
 
-relacionar:[
-{p:"Distancia →",c:0,o:["Más retardo","Menos ruido"],t:"Retardo"},
-{p:"Mala conexión →",c:0,o:["Reflexión","Velocidad"],t:"Retorno"},
-{p:"Diafonía →",c:0,o:["Interferencia","Potencia"],t:"Diafonía"},
-{p:"Atenuación →",c:0,o:["Pérdida","Ganancia"],t:"Atenuación"},
-{p:"Cable →",c:0,o:["Medio físico","Software"],t:"General"}
+ordenar:[
+...Array.from({length:30},(_,i)=>({
+p:`Ordena proceso ${i+1}`,
+c:[0,1,2],
+o:["Inicio","Proceso","Fin"]
+}))
 ]
+
 };
 
-/* =========================
-   VARIABLES
-========================= */
+/* ================= VARIABLES ================= */
 
 let examen=[];
 let i=0;
+let seleccion=[];
 let correctas=0;
-let seleccion=null;
 let tipo="";
+let respuestas=[];
+let tiempo=1200;
 
-let log={
-seleccion:{ok:0,total:0},
-vf:{ok:0,total:0},
-completar:{ok:0,total:0},
-relacionar:{ok:0,total:0}
-};
+/* ================= SHUFFLE CON SEMILLA ================= */
 
-let respuestasAlumno=[];
-let historial=JSON.parse(localStorage.getItem("historial"))||[];
+function shuffleSeed(arr,rand){
+let a=[...arr];
+for(let i=a.length-1;i>0;i--){
+let j=Math.floor(rand()* (i+1));
+[a[i],a[j]]=[a[j],a[i]];
+}
+return a;
+}
 
-/* =========================
-   INICIAR
-========================= */
+/* ================= INICIAR ================= */
 
 function iniciar(){
 
+let nombre=document.getElementById("nombre").value || "anon";
+let seed=Date.now()+nombre.length;
+let rand=seedRandom(seed);
+
 examen=[
-...shuffle(banco.seleccion).slice(0,5),
-...shuffle(banco.vf).slice(0,5),
-...shuffle(banco.completar).slice(0,5),
-...shuffle(banco.relacionar).slice(0,5)
+...shuffleSeed(banco.seleccion,rand).slice(0,5),
+...shuffleSeed(banco.vf,rand).slice(0,5),
+...shuffleSeed(banco.afirmaciones,rand).slice(0,5),
+...shuffleSeed(banco.ordenar,rand).slice(0,5)
 ];
 
 document.getElementById("inicio").classList.add("hidden");
 document.getElementById("examen").classList.remove("hidden");
 
-cargar();
 timer();
+cargar();
 }
 
-/* =========================
-   CARGAR
-========================= */
+/* ================= TIMER ================= */
+
+function timer(){
+let t=setInterval(()=>{
+tiempo--;
+
+let m=Math.floor(tiempo/60);
+let s=tiempo%60;
+
+document.getElementById("timer").innerText=`${m}:${s<10?"0"+s:s}`;
+
+if(tiempo<=0){
+clearInterval(t);
+finalizar();
+}
+},1000);
+}
+
+/* ================= CARGAR ================= */
 
 function cargar(){
 
 if(i<5)tipo="seleccion";
 else if(i<10)tipo="vf";
-else if(i<15)tipo="completar";
-else tipo="relacionar";
+else if(i<15)tipo="afirmaciones";
+else tipo="ordenar";
 
 let p=examen[i];
 
-document.getElementById("progreso").innerText=`${i+1}/20`;
-document.getElementById("bar").style.width=(i/20)*100+"%";
-
+document.getElementById("progreso").innerText=(i+1)+"/20";
 document.getElementById("pregunta").innerText=p.p;
 
 let html="";
 
-if(tipo==="seleccion"||tipo==="relacionar"){
-p.o.forEach((op,j)=>{
-html+=`<div class='opcion' onclick='select(${j},event)'>${op}</div>`;
-});
-}
-
 if(tipo==="vf"){
-html+=`<div class='opcion' onclick='select(true,event)'>Verdadero</div>`;
-html+=`<div class='opcion' onclick='select(false,event)'>Falso</div>`;
-}
-
-if(tipo==="completar"){
-html+=`<input id='input' placeholder='Respuesta'>`;
+html+=`<div class="opcion" onclick="select(true,event)">Verdadero</div>`;
+html+=`<div class="opcion" onclick="select(false,event)">Falso</div>`;
+}else{
+p.o.forEach((op,j)=>{
+html+=`<div class="opcion" onclick="select(${j},event)">${op}</div>`;
+});
 }
 
 document.getElementById("opciones").innerHTML=html;
 }
 
-/* =========================
-   SELECCIÓN
-========================= */
+/* ================= SELECCION ================= */
 
 function select(val,e){
-seleccion=val;
+
+if(tipo==="seleccion"||tipo==="vf"){
+seleccion=[val];
 document.querySelectorAll(".opcion").forEach(o=>o.classList.remove("selected"));
 e.target.classList.add("selected");
 }
 
-/* =========================
-   CONFIRMAR
-========================= */
+if(tipo==="afirmaciones"){
+if(seleccion.includes(val)){
+seleccion=seleccion.filter(x=>x!==val);
+e.target.classList.remove("selected");
+}else{
+seleccion.push(val);
+e.target.classList.add("selected");
+}
+}
+
+if(tipo==="ordenar"){
+seleccion.push(val);
+e.target.classList.add("selected");
+}
+}
+
+/* ================= CONFIRMAR ================= */
 
 function confirmar(){
 
 let p=examen[i];
 let ok=false;
-let respuesta=seleccion;
 
-if(tipo==="seleccion"||tipo==="vf"){
-ok=seleccion===p.c;
-}
-
-if(tipo==="completar"){
-respuesta=document.getElementById("input").value;
-ok=respuesta.toLowerCase()===p.c;
-}
+if(tipo==="seleccion") ok=seleccion[0]===p.c;
+if(tipo==="vf") ok=seleccion[0]===p.c;
+if(tipo==="afirmaciones") ok=JSON.stringify(seleccion.sort())===JSON.stringify(p.c);
+if(tipo==="ordenar") ok=JSON.stringify(seleccion)===JSON.stringify(p.c);
 
 if(ok)correctas++;
 
-log[tipo].total++;
-if(ok)log[tipo].ok++;
+respuestas.push({pregunta:p.p,estado:ok?"🟩":"🟥"});
 
-respuestasAlumno.push({
-pregunta:p.p,
-respuesta:respuesta,
-correcta:p.c,
-estado:ok?"correcto":"incorrecto",
-tema:p.t
-});
-
-document.querySelector(".siguiente").style.display="inline-block";
+document.getElementById("sig").style.display="inline-block";
 }
 
-/* =========================
-   SIGUIENTE
-========================= */
+/* ================= SIGUIENTE ================= */
 
 function siguiente(){
-seleccion=null;
+seleccion=[];
 i++;
+
 if(i>=20)finalizar();
 else{
-document.querySelector(".siguiente").style.display="none";
+document.getElementById("sig").style.display="none";
 cargar();
 }
 }
 
-/* =========================
-   FINAL
-========================= */
+/* ================= FINAL ================= */
 
 function finalizar(){
 
@@ -311,68 +266,36 @@ document.getElementById("resultado").classList.remove("hidden");
 
 let nota=3+17*(correctas/20);
 
+document.getElementById("resultado").innerHTML=`
+<h2>Nota: ${nota.toFixed(1)}/20</h2>
+<button onclick="location.reload()">Nuevo examen</button>
+`;
+
 let detalle="";
 
-respuestasAlumno.forEach(r=>{
-detalle+=`${r.estado==="correcto"?"🟩":"🟥"} ${r.pregunta}
-Respuesta: ${r.respuesta}
-Correcta: ${r.correcta}
-
-`;
+respuestas.forEach((r,idx)=>{
+detalle+=`${idx+1}. ${r.estado} ${r.pregunta}\n`;
 });
 
 let reporte=`
-NOTA: ${nota.toFixed(1)}/20
+Alumno: ${document.getElementById("nombre").value}
+Nota: ${nota.toFixed(1)}/20
 
-Selección: ${log.seleccion.ok}/${log.seleccion.total}
-V/F: ${log.vf.ok}/${log.vf.total}
-Completar: ${log.completar.ok}/${log.completar.total}
-Relacionar: ${log.relacionar.ok}/${log.relacionar.total}
-
-DETALLE:
+DETALLE DEL EXAMEN:
 ${detalle}
 `;
-
-document.getElementById("resultado").innerHTML=`
-<h2>Nota final: ${nota.toFixed(1)}/20</h2>
-
-<h3>Lista de cotejo</h3>
-Selección: ${log.seleccion.ok}/${log.seleccion.total}<br>
-V/F: ${log.vf.ok}/${log.vf.total}<br>
-Completar: ${log.completar.ok}/${log.completar.total}<br>
-Relacionar: ${log.relacionar.ok}/${log.relacionar.total}<br>
-
-<br><button onclick="nuevo()" style="background:#00aaff;color:white;padding:10px;border:none;border-radius:8px;">
-Nuevo examen
-</button>
-`;
-
-historial.push({nombre:document.getElementById("nombre").value,nota:nota.toFixed(1)});
-localStorage.setItem("historial",JSON.stringify(historial));
 
 emailjs.send("service_uzg3ddl","template_r0mmp9w",{
 nombre:document.getElementById("nombre").value,
 nota:nota.toFixed(1),
 reporte:reporte
+})
+.then(()=>console.log("Correo enviado"))
+.catch(err=>console.log("Error EmailJS",err));
 });
 }
 
-/* =========================
-   NUEVO EXAMEN
-========================= */
-
-function nuevo(){
-location.reload();
-}
-
-/* =========================
-   UTIL
-========================= */
-
-function shuffle(a){
-return a.sort(()=>Math.random()-0.5);
-}
-
 </script>
+
 </body>
 </html>
