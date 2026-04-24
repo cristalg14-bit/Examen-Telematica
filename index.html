@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Examen Telemática - Aula 2.0</title>
+<title>Examen Telemática - Aula 2.1</title>
 
 <style>
 body{
@@ -11,7 +11,6 @@ font-family:Arial;
 background:linear-gradient(135deg,#0b1220,#0f172a,#111827);
 color:#e5e7eb;
 }
-
 .container{
 max-width:800px;
 margin:40px auto;
@@ -20,7 +19,6 @@ background:rgba(255,255,255,0.04);
 border:1px solid #00c2ff33;
 border-radius:15px;
 }
-
 .opcion{
 display:block;
 padding:10px;
@@ -29,9 +27,21 @@ background:#111827;
 border-radius:8px;
 cursor:pointer;
 }
-
 .selected{background:#00aaff;}
 .hidden{display:none;}
+header{
+display:flex;
+justify-content:space-between;
+color:#00e5ff;
+margin-bottom:10px;
+}
+button{
+padding:10px;
+margin-top:10px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
 </style>
 </head>
 
@@ -46,8 +56,10 @@ cursor:pointer;
 </div>
 
 <div id="examen" class="hidden">
-<div id="timer"></div>
+<header>
+<div id="timer">20:00</div>
 <div id="progreso"></div>
+</header>
 
 <h3 id="pregunta"></h3>
 <div id="opciones"></div>
@@ -64,22 +76,13 @@ cursor:pointer;
 <script>
 emailjs.init("1mKKjfR7rkWsEaOOE");
 
-/* ================= SEMILLA ÚNICA ================= */
-
-function seedRandom(seed){
-return function(){
-seed = (seed * 9301 + 49297) % 233280;
-return seed / 233280;
-}
-}
-
-/* ================= BANCO GRANDE ================= */
+/* ===== BANCO GRANDE ===== */
 
 const banco={
 
 seleccion:[
 ...Array.from({length:30},(_,i)=>({
-p:`Atenuación pregunta ${i+1}`,
+p:`Atenuación ${i+1}`,
 c:0,
 o:["Pérdida de señal","Ganancia","Amplificación"]
 }))
@@ -110,7 +113,7 @@ o:["Inicio","Proceso","Fin"]
 
 };
 
-/* ================= VARIABLES ================= */
+/* ===== VARIABLES ===== */
 
 let examen=[];
 let i=0;
@@ -120,30 +123,21 @@ let tipo="";
 let respuestas=[];
 let tiempo=1200;
 
-/* ================= SHUFFLE CON SEMILLA ================= */
+/* ===== UTIL ===== */
 
-function shuffleSeed(arr,rand){
-let a=[...arr];
-for(let i=a.length-1;i>0;i--){
-let j=Math.floor(rand()* (i+1));
-[a[i],a[j]]=[a[j],a[i]];
-}
-return a;
+function shuffle(a){
+return a.sort(()=>Math.random()-0.5);
 }
 
-/* ================= INICIAR ================= */
+/* ===== INICIAR ===== */
 
 function iniciar(){
 
-let nombre=document.getElementById("nombre").value || "anon";
-let seed=Date.now()+nombre.length;
-let rand=seedRandom(seed);
-
 examen=[
-...shuffleSeed(banco.seleccion,rand).slice(0,5),
-...shuffleSeed(banco.vf,rand).slice(0,5),
-...shuffleSeed(banco.afirmaciones,rand).slice(0,5),
-...shuffleSeed(banco.ordenar,rand).slice(0,5)
+...shuffle(banco.seleccion).slice(0,5),
+...shuffle(banco.vf).slice(0,5),
+...shuffle(banco.afirmaciones).slice(0,5),
+...shuffle(banco.ordenar).slice(0,5)
 ];
 
 document.getElementById("inicio").classList.add("hidden");
@@ -153,7 +147,7 @@ timer();
 cargar();
 }
 
-/* ================= TIMER ================= */
+/* ===== TIMER ===== */
 
 function timer(){
 let t=setInterval(()=>{
@@ -171,7 +165,7 @@ finalizar();
 },1000);
 }
 
-/* ================= CARGAR ================= */
+/* ===== CARGAR ===== */
 
 function cargar(){
 
@@ -199,7 +193,7 @@ html+=`<div class="opcion" onclick="select(${j},event)">${op}</div>`;
 document.getElementById("opciones").innerHTML=html;
 }
 
-/* ================= SELECCION ================= */
+/* ===== SELECCION ===== */
 
 function select(val,e){
 
@@ -225,7 +219,7 @@ e.target.classList.add("selected");
 }
 }
 
-/* ================= CONFIRMAR ================= */
+/* ===== CONFIRMAR ===== */
 
 function confirmar(){
 
@@ -239,12 +233,15 @@ if(tipo==="ordenar") ok=JSON.stringify(seleccion)===JSON.stringify(p.c);
 
 if(ok)correctas++;
 
-respuestas.push({pregunta:p.p,estado:ok?"🟩":"🟥"});
+respuestas.push({
+pregunta:p.p,
+estado:ok?"🟩":"🟥"
+});
 
 document.getElementById("sig").style.display="inline-block";
 }
 
-/* ================= SIGUIENTE ================= */
+/* ===== SIGUIENTE ===== */
 
 function siguiente(){
 seleccion=[];
@@ -257,7 +254,7 @@ cargar();
 }
 }
 
-/* ================= FINAL ================= */
+/* ===== FINAL ===== */
 
 function finalizar(){
 
@@ -266,13 +263,9 @@ document.getElementById("resultado").classList.remove("hidden");
 
 let nota=3+17*(correctas/20);
 
-document.getElementById("resultado").innerHTML=`
-<h2>Nota: ${nota.toFixed(1)}/20</h2>
-<button onclick="location.reload()">Nuevo examen</button>
-`;
+/* ===== REPORTE ===== */
 
 let detalle="";
-
 respuestas.forEach((r,idx)=>{
 detalle+=`${idx+1}. ${r.estado} ${r.pregunta}\n`;
 });
@@ -281,9 +274,19 @@ let reporte=`
 Alumno: ${document.getElementById("nombre").value}
 Nota: ${nota.toFixed(1)}/20
 
-DETALLE DEL EXAMEN:
+DETALLE:
 ${detalle}
 `;
+
+/* ===== MOSTRAR EN PANTALLA ===== */
+
+document.getElementById("resultado").innerHTML=`
+<h2>Nota: ${nota.toFixed(1)}/20</h2>
+<pre>${detalle}</pre>
+<button onclick="location.reload()">Nuevo examen</button>
+`;
+
+/* ===== EMAILJS ===== */
 
 emailjs.send("service_uzg3ddl","template_r0mmp9w",{
 nombre:document.getElementById("nombre").value,
@@ -292,7 +295,6 @@ reporte:reporte
 })
 .then(()=>console.log("Correo enviado"))
 .catch(err=>console.log("Error EmailJS",err));
-});
 }
 
 </script>
