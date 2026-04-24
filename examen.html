@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Examen Telemática</title>
+<style>
+body { font-family: Arial; padding: 20px; }
+.hidden { display:none; }
+.card { margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; }
+</style>
+</head>
+
+<body>
+
+<h2>Examen - Medios de Transmisión</h2>
+
+<div id="inicio">
+  <label>Nombre completo:</label><br>
+  <input type="text" id="nombre"><br><br>
+  <button onclick="iniciar()">Iniciar examen</button>
+</div>
+
+<div id="examen" class="hidden">
+  <p id="timer"></p>
+  <form id="form"></form>
+  <button onclick="finalizar()">Finalizar</button>
+</div>
+
+<div id="resultado" class="hidden"></div>
+
+<!-- EMAILJS -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+emailjs.init("1mKKjfR7rkWsEaOOE");
+</script>
+
+<script>
+const preguntas = [
+  {
+    texto: "¿Qué es la atenuación?",
+    opciones: ["Pérdida de señal", "Aumento de señal", "Interferencia"],
+    correcta: 0
+  },
+  {
+    texto: "La diafonía ocurre entre cables",
+    opciones: ["Verdadero", "Falso"],
+    correcta: 0
+  },
+  {
+    texto: "La pérdida de retorno ocurre cuando la señal ____",
+    opciones: ["rebota", "desaparece", "se amplifica"],
+    correcta: 0
+  },
+  {
+    texto: "Mayor distancia = mayor retardo",
+    opciones: ["Verdadero", "Falso"],
+    correcta: 0
+  }
+];
+
+let examen = [];
+let tiempo = 1200; // 20 minutos
+
+function iniciar(){
+  let nombre = document.getElementById("nombre").value;
+  if(nombre === "") return alert("Escribe tu nombre");
+
+  document.getElementById("inicio").classList.add("hidden");
+  document.getElementById("examen").classList.remove("hidden");
+
+  examen = preguntas.sort(()=>Math.random()-0.5);
+
+  let form = document.getElementById("form");
+
+  examen.forEach((p,i)=>{
+    let html = `<div class='card'><p>${p.texto}</p>`;
+    p.opciones.forEach((op,j)=>{
+      html += `<input type='radio' name='p${i}' value='${j}'> ${op}<br>`;
+    });
+    html += "</div>";
+    form.innerHTML += html;
+  });
+
+  timer();
+}
+
+function timer(){
+  let t = setInterval(()=>{
+    tiempo--;
+    document.getElementById("timer").innerText = "Tiempo: " + tiempo + "s";
+    if(tiempo <= 0){
+      clearInterval(t);
+      finalizar();
+    }
+  },1000);
+}
+
+function finalizar(){
+  let nota = 0;
+
+  examen.forEach((p,i)=>{
+    let resp = document.querySelector(`input[name=p${i}]:checked`);
+    if(resp && parseInt(resp.value) === p.correcta){
+      nota++;
+    }
+  });
+
+  document.getElementById("examen").classList.add("hidden");
+  document.getElementById("resultado").classList.remove("hidden");
+
+  let nombre = document.getElementById("nombre").value;
+
+  document.getElementById("resultado").innerHTML =
+    `<h3>Tu nota es: ${nota}/${examen.length}</h3>`;
+
+  emailjs.send("service_uzg3ddl","template_576oagh",{
+    nombre: nombre,
+    nota: nota
+  });
+}
+</script>
+
+</body>
+</html>
