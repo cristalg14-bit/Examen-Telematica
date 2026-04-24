@@ -3,92 +3,211 @@
 <head>
 <meta charset="UTF-8">
 <title>Examen Telemática</title>
+
 <style>
-body { font-family: Arial; padding: 20px; }
-.hidden { display:none; }
-.card { margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; }
+body{
+  margin:0;
+  font-family: Arial;
+  background: linear-gradient(135deg,#0b1220,#0f172a,#111827);
+  color:#e5e7eb;
+}
+
+.container{
+  max-width:750px;
+  margin:40px auto;
+  padding:25px;
+  background: rgba(255,255,255,0.04);
+  border:1px solid #00c2ff33;
+  border-radius:15px;
+  box-shadow:0 0 20px #00c2ff22;
+  backdrop-filter: blur(10px);
+}
+
+h2{color:#00e5ff;}
+
+input{
+  padding:10px;
+  width:100%;
+  margin:10px 0;
+  border-radius:8px;
+  border:none;
+}
+
+button{
+  padding:10px 15px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.confirmar{
+  background:#00ff88;
+  color:black;
+}
+
+.siguiente{
+  background:#00aaff;
+  color:white;
+  display:none;
+}
+
+.opcion{
+  display:block;
+  margin:8px 0;
+  padding:10px;
+  background:#111827;
+  border:1px solid #00c2ff22;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.opcion:hover{
+  background:#1f2937;
+}
+
+header{
+  display:flex;
+  justify-content:space-between;
+  color:#00e5ff;
+  margin-bottom:15px;
+}
+
+.hidden{display:none;}
+
+.progress{
+  height:8px;
+  background:#1f2937;
+  border-radius:10px;
+  overflow:hidden;
+  margin-bottom:15px;
+}
+
+.bar{
+  height:100%;
+  width:0%;
+  background:#00e5ff;
+}
 </style>
 </head>
 
 <body>
 
-<h2>Examen - Medios de Transmisión</h2>
+<div class="container">
 
 <div id="inicio">
-  <label>Nombre completo:</label><br>
-  <input type="text" id="nombre"><br><br>
-  <button onclick="iniciar()">Iniciar examen</button>
+  <h2>Examen Telemática</h2>
+  <input id="nombre" placeholder="Nombre completo">
+  <button onclick="iniciar()">Iniciar Examen</button>
 </div>
 
 <div id="examen" class="hidden">
-  <p id="timer"></p>
-  <form id="form"></form>
-  <button onclick="finalizar()">Finalizar</button>
+
+<header>
+  <div id="timer">20:00</div>
+  <div id="progreso">0/20</div>
+</header>
+
+<div class="progress">
+  <div class="bar" id="bar"></div>
+</div>
+
+<h3 id="pregunta"></h3>
+<div id="opciones"></div>
+
+<button class="confirmar" onclick="confirmar()">Confirmar respuesta</button>
+<button class="siguiente" onclick="siguiente()">Siguiente</button>
+
 </div>
 
 <div id="resultado" class="hidden"></div>
 
-<!-- EMAILJS -->
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 emailjs.init("1mKKjfR7rkWsEaOOE");
-</script>
 
-<script>
-const preguntas = [
-  {
-    texto: "¿Qué es la atenuación?",
-    opciones: ["Pérdida de señal", "Aumento de señal", "Interferencia"],
-    correcta: 0
-  },
-  {
-    texto: "La diafonía ocurre entre cables",
-    opciones: ["Verdadero", "Falso"],
-    correcta: 0
-  },
-  {
-    texto: "La pérdida de retorno ocurre cuando la señal ____",
-    opciones: ["rebota", "desaparece", "se amplifica"],
-    correcta: 0
-  },
-  {
-    texto: "Mayor distancia = mayor retardo",
-    opciones: ["Verdadero", "Falso"],
-    correcta: 0
-  }
+/* =======================
+   BANCO DE PREGUNTAS
+======================= */
+
+const banco = [
+{p:"¿Qué es la atenuación?",c:0,t:"Atenuación",o:["Pérdida de señal","Ganancia","Amplificación"]},
+{p:"La diafonía es...",c:0,t:"Diafonía",o:["Interferencia","Velocidad","Potencia"]},
+{p:"La pérdida de retorno ocurre cuando...",c:0,t:"Retorno",o:["La señal rebota","Se amplifica","Se elimina"]},
+{p:"El retardo depende de...",c:0,t:"Retardo",o:["Distancia","Color","Frecuencia"]},
+{p:"Mayor distancia genera...",c:0,t:"Retardo",o:["Más retardo","Menos retardo","Ninguno"]},
+{p:"La atenuación aumenta con...",c:0,t:"Atenuación",o:["Distancia","Voltaje","Velocidad"]},
+{p:"La diafonía ocurre entre...",c:0,t:"Diafonía",o:["Cables","Routers","Switches"]},
+{p:"El retorno se produce por...",c:0,t:"Retorno",o:["Mala conexión","Buen cable","Fibra óptica"]},
+{p:"El retardo es...",c:0,t:"Retardo",o:["Tiempo de señal","Voltaje","Potencia"]},
+{p:"La atenuación afecta la...",c:0,t:"Atenuación",o:["Calidad","Color","Tamaño"]}
 ];
 
-let examen = [];
-let tiempo = 1200; // 20 minutos
+let examen=[];
+let i=0;
+let correctas=0;
+let seleccion=null;
+let tiempo=1200;
 
 function iniciar(){
-  let nombre = document.getElementById("nombre").value;
-  if(nombre === "") return alert("Escribe tu nombre");
-
+  examen = banco.sort(()=>Math.random()-0.5).slice(0,20);
   document.getElementById("inicio").classList.add("hidden");
   document.getElementById("examen").classList.remove("hidden");
-
-  examen = preguntas.sort(()=>Math.random()-0.5);
-
-  let form = document.getElementById("form");
-
-  examen.forEach((p,i)=>{
-    let html = `<div class='card'><p>${p.texto}</p>`;
-    p.opciones.forEach((op,j)=>{
-      html += `<input type='radio' name='p${i}' value='${j}'> ${op}<br>`;
-    });
-    html += "</div>";
-    form.innerHTML += html;
-  });
-
+  cargar();
   timer();
 }
 
+function cargar(){
+  document.getElementById("progreso").innerText = `${i+1}/20`;
+  document.getElementById("bar").style.width = ((i/20)*100)+"%";
+
+  let p = examen[i];
+  document.getElementById("pregunta").innerText = p.p;
+
+  let html="";
+  p.o.forEach((op,j)=>{
+    html += `<div class='opcion' onclick='seleccionar(${j})'>${op}</div>`;
+  });
+
+  document.getElementById("opciones").innerHTML = html;
+}
+
+function seleccionar(j){
+  seleccion=j;
+}
+
+function confirmar(){
+  if(seleccion===null) return alert("Selecciona una opción");
+
+  if(seleccion===examen[i].c){
+    correctas++;
+  }
+
+  document.querySelector(".siguiente").style.display="inline-block";
+}
+
+function siguiente(){
+  seleccion=null;
+  i++;
+
+  if(i>=20){
+    finalizar();
+    return;
+  }
+
+  document.querySelector(".siguiente").style.display="none";
+  cargar();
+}
+
 function timer(){
-  let t = setInterval(()=>{
+  let t=setInterval(()=>{
     tiempo--;
-    document.getElementById("timer").innerText = "Tiempo: " + tiempo + "s";
-    if(tiempo <= 0){
+    document.getElementById("timer").innerText=tiempo;
+
+    if(tiempo<=0){
       clearInterval(t);
       finalizar();
     }
@@ -96,26 +215,17 @@ function timer(){
 }
 
 function finalizar(){
-  let nota = 0;
-
-  examen.forEach((p,i)=>{
-    let resp = document.querySelector(`input[name=p${i}]:checked`);
-    if(resp && parseInt(resp.value) === p.correcta){
-      nota++;
-    }
-  });
-
   document.getElementById("examen").classList.add("hidden");
   document.getElementById("resultado").classList.remove("hidden");
 
-  let nombre = document.getElementById("nombre").value;
+  let nota = 3 + 17*(correctas/20);
 
   document.getElementById("resultado").innerHTML =
-    `<h3>Tu nota es: ${nota}/${examen.length}</h3>`;
+  `<h2>Nota final: ${nota.toFixed(1)}/20</h2>`;
 
   emailjs.send("service_uzg3ddl","template_576oagh",{
-    nombre: nombre,
-    nota: nota
+    nombre: document.getElementById("nombre").value,
+    nota: nota.toFixed(1)
   });
 }
 </script>
