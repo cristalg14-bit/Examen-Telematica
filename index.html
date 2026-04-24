@@ -1,1 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Examen Telemática - Aula 1.0</title>
 
+<style>
+body{
+  margin:0;
+  font-family: Arial;
+  background: linear-gradient(135deg,#0b1220,#0f172a,#111827);
+  color:#e5e7eb;
+}
+
+.container{
+  max-width:800px;
+  margin:40px auto;
+  padding:25px;
+  background: rgba(255,255,255,0.04);
+  border:1px solid #00c2ff33;
+  border-radius:15px;
+  box-shadow:0 0 20px #00c2ff22;
+  backdrop-filter: blur(10px);
+}
+
+h2{color:#00e5ff;}
+
+input{
+  padding:10px;
+  width:100%;
+  margin:10px 0;
+  border-radius:8px;
+  border:none;
+}
+
+button{
+  padding:10px 15px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.confirmar{background:#00ff88;color:black;}
+.siguiente{background:#00aaff;color:white;display:none;}
+
+.opcion{
+  display:block;
+  margin:8px 0;
+  padding:10px;
+  background:#111827;
+  border:1px solid #00c2ff22;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.opcion:hover{background:#1f2937;}
+
+.selected{
+  background:#00aaff !important;
+  color:white;
+  box-shadow:0 0 10px #00e5ff55;
+}
+
+header{
+  display:flex;
+  justify-content:space-between;
+  color:#00e5ff;
+  margin-bottom:15px;
+}
+
+.hidden{display:none;}
+
+.progress{
+  height:8px;
+  background:#1f2937;
+  border-radius:10px;
+  overflow:hidden;
+  margin-bottom:15px;
+}
+
+.bar{
+  height:100%;
+  width:0%;
+  background:#00e5ff;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- INICIO -->
+<div id="inicio">
+  <h2>Examen Telemática</h2>
+  <input id="nombre" placeholder="Nombre completo">
+  <button onclick="iniciar()">Iniciar Examen</button>
+</div>
+
+<!-- EXAMEN -->
+<div id="examen" class="hidden">
+
+<header>
+  <div id="timer">20:00</div>
+  <div id="progreso">0/20</div>
+</header>
+
+<div class="progress">
+  <div class="bar" id="bar"></div>
+</div>
+
+<h3 id="pregunta"></h3>
+<div id="opciones"></div>
+
+<button class="confirmar" onclick="confirmar()">Confirmar respuesta</button>
+<button class="siguiente" onclick="siguiente()">Siguiente</button>
+
+</div>
+
+<!-- RESULTADO -->
+<div id="resultado" class="hidden"></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+emailjs.init("1mKKjfR7rkWsEaOOE");
+
+/* ======================
+   BANCO ESTABLE
+====================== */
+
+const banco = {
+seleccion:[
+{p:"¿Qué es la atenuación?",c:0,o:["Pérdida de señal","Ganancia","Amplificación"],t:"Atenuación"},
+{p:"La diafonía es:",c:0,o:["Interferencia","Velocidad","Potencia"],t:"Diafonía"},
+{p:"El retardo depende de:",c:0,o:["Distancia","Color","Voltaje"],t:"Retardo"},
+{p:"La pérdida de retorno ocurre por:",c:0,o:["Mala conexión","Buen cable","Fibra"],t:"Retorno"},
+{p:"A mayor distancia:",c:0,o:["Más atenuación","Menos atenuación","Igual"],t:"Atenuación"}
+],
+
+vf:[
+{p:"La atenuación aumenta con la distancia",c:true,t:"Atenuación"},
+{p:"La diafonía mejora la señal",c:false,t:"Diafonía"},
+{p:"El retardo depende del cable",c:true,t:"Retardo"},
+{p:"La pérdida de retorno es deseada",c:false,t:"Retorno"},
+{p:"Un cable largo aumenta el retardo",c:true,t:"Retardo"}
+],
+
+completar:[
+{p:"La atenuación es pérdida de ______",c:"señal",t:"Atenuación"},
+{p:"La diafonía es ______ entre cables",c:"interferencia",t:"Diafonía"},
+{p:"El retardo depende de la ______",c:"distancia",t:"Retardo"},
+{p:"La señal puede ______ en malas conexiones",c:"reflejarse",t:"Retorno"},
+{p:"El cable afecta la ______ de transmisión",c:"calidad",t:"Atenuación"}
+],
+
+relacionar:[
+{p:"Distancia →",c:0,o:["Más retardo","Menos ruido"],t:"Retardo"},
+{p:"Mala conexión →",c:0,o:["Reflexión","Velocidad"],t:"Retorno"},
+{p:"Diafonía →",c:0,o:["Interferencia","Potencia"],t:"Diafonía"},
+{p:"Atenuación →",c:0,o:["Pérdida","Ganancia"],t:"Atenuación"},
+{p:"Cable →",c:0,o:["Medio físico","Software"],t:"General"}
+]
+};
+
+/* ======================
+   VARIABLES
+====================== */
+
+let examen=[];
+let i=0;
+let correctas=0;
+let seleccion=null;
+let tipo="";
+let log={
+seleccion:{ok:0,total:0},
+vf:{ok:0,total:0},
+completar:{ok:0,total:0},
+relacionar:{ok:0,total:0}
+};
+
+/* ======================
+   INICIAR
+====================== */
+
+function iniciar(){
+
+examen=[
+...shuffle(banco.seleccion).slice(0,5),
+...shuffle(banco.vf).slice(0,5),
+...shuffle(banco.completar).slice(0,5),
+...shuffle(banco.relacionar).slice(0,5)
+];
+
+document.getElementById("inicio").classList.add("hidden");
+document.getElementById("examen").classList.remove("hidden");
+
+cargar();
+timer();
+}
+
+/* ======================
+   CARGAR
+====================== */
+
+function cargar(){
+
+if(i<5) tipo="seleccion";
+else if(i<10) tipo="vf";
+else if(i<15) tipo="completar";
+else tipo="relacionar";
+
+let p=examen[i];
+
+document.getElementById("progreso").innerText=`${i+1}/20`;
+document.getElementById("bar").style.width=(i/20)*100+"%";
+
+document.getElementById("pregunta").innerText=p.p;
+
+let html="";
+
+if(tipo==="seleccion" || tipo==="relacionar"){
+p.o.forEach((op,j)=>{
+html+=`<div class='opcion' onclick='select(${j},event)'>${op}</div>`;
+});
+}
+
+if(tipo==="vf"){
+html+=`<div class='opcion' onclick='select(true,event)'>Verdadero</div>`;
+html+=`<div class='opcion' onclick='select(false,event)'>Falso</div>`;
+}
+
+if(tipo==="completar"){
+html+=`<input id='input' placeholder='Respuesta'>`;
+}
+
+document.getElementById("opciones").innerHTML=html;
+}
+
+/* ======================
+   SELECCIÓN
+====================== */
+
+function select(val,e){
+seleccion=val;
+
+document.querySelectorAll(".opcion").forEach(o=>{
+o.classList.remove("selected");
+});
+
+e.target.classList.add("selected");
+}
+
+/* ======================
+   CONFIRMAR
+====================== */
+
+function confirmar(){
+
+let p=examen[i];
+let ok=false;
+
+if(tipo==="seleccion"||tipo==="vf"){
+ok=seleccion===p.c;
+}
+
+if(tipo==="completar"){
+let v=document.getElementById("input").value.toLowerCase();
+ok=v===p.c;
+}
+
+log[tipo].total++;
+if(ok){
+correctas++;
+log[tipo].ok++;
+}
+
+document.querySelector(".siguiente").style.display="inline-block";
+}
+
+/* ======================
+   SIGUIENTE
+====================== */
+
+function siguiente(){
+seleccion=null;
+i++;
+
+if(i>=20){
+finalizar();
+return;
+}
+
+document.querySelector(".siguiente").style.display="none";
+cargar();
+}
+
+/* ======================
+   TIMER
+====================== */
+
+let tiempo=1200;
+
+function timer(){
+let t=setInterval(()=>{
+tiempo--;
+document.getElementById("timer").innerText=tiempo;
+
+if(tiempo<=0){
+clearInterval(t);
+finalizar();
+}
+},1000);
+}
+
+/* ======================
+   FINAL + COTEJO
+====================== */
+
+function finalizar(){
+
+document.getElementById("examen").classList.add("hidden");
+document.getElementById("resultado").classList.remove("hidden");
+
+let nota=3+17*(correctas/20);
+
+document.getElementById("resultado").innerHTML=`
+<h2>Nota final: ${nota.toFixed(1)}/20</h2>
+
+<h3>📋 Lista de Cotejo</h3>
+
+📡 Selección: ${log.seleccion.ok}/${log.seleccion.total}<br>
+🔌 V/F: ${log.vf.ok}/${log.vf.total}<br>
+✏ Completar: ${log.completar.ok}/${log.completar.total}<br>
+🔁 Relacionar: ${log.relacionar.ok}/${log.relacionar.total}<br>
+
+<br>
+<button onclick="nuevoExamen()" style="padding:10px;background:#00aaff;color:white;border:none;border-radius:8px;">
+Nuevo examen
+</button>
+`;
+
+emailjs.send("service_uzg3ddl","template_576oagh",{
+nombre:document.getElementById("nombre").value,
+nota:nota.toFixed(1)
+});
+}
+
+/* ======================
+   REINICIO
+====================== */
+
+function nuevoExamen(){
+location.reload();
+}
+
+/* ======================
+   SHUFFLE
+====================== */
+
+function shuffle(a){
+return a.sort(()=>Math.random()-0.5);
+}
+
+</script>
+
+</body>
+</html>
